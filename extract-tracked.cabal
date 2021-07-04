@@ -1,0 +1,62 @@
+cabal-version:       2.2
+name:                extract-tracked
+version:             0.1.0.0
+synopsis:            Extract YouTube to tracked Matroska Audio
+description:         With varying degrees of automation
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Jean-Baptiste Mazon
+maintainer:          jb@yavin
+copyright:           © 2021
+category:            Music
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+
+common common
+  default-extensions:  DeriveFoldable
+                     , LambdaCase
+                     , GeneralizedNewtypeDeriving
+                     , OverloadedStrings
+                     , RecordWildCards
+                     , TupleSections
+                     , TypeFamilies
+
+  build-depends:       base
+  ghc-options:         -Wall
+
+library
+  import: common
+  hs-source-dirs:      lib
+
+  exposed-modules:     Album
+                     , Chapters
+                     , DescriptionParser
+                     , FetchMetadata
+
+  build-depends:       binary
+                     , containers
+                     , deepseq
+                     , gogol
+                     , gogol-youtube
+                     , hashable
+                     , lens
+                     , regex-pcre
+                     , shake
+                     , text
+                     , transformers
+
+  default-language:    Haskell2010
+
+executable fetch-description
+  import: common
+  main-is:             fetch-description.hs
+  hs-source-dirs:      src
+  build-depends:       extract-tracked
+  default-language:    Haskell2010
+
+executable extract-tracked
+  import: common
+  main-is:             extract-tracked.hs
+  hs-source-dirs:      src
+  build-depends:       extract-tracked
+  default-language:    Haskell2010
