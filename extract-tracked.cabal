@@ -1,6 +1,6 @@
 cabal-version:       2.2
 name:                extract-tracked
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Extract YouTube to tracked Matroska Audio
 description:         With varying degrees of automation
 license:             BSD-3-Clause
@@ -19,6 +19,7 @@ common common
                      , OverloadedStrings
                      , RecordWildCards
                      , TupleSections
+                     , TypeApplications
                      , TypeFamilies
 
   build-depends:       base

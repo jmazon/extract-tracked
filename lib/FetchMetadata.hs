@@ -5,13 +5,16 @@ module FetchMetadata
   )
   where
 
+import Control.Exception (handleJust)
 import Control.Lens
+import Control.Monad (unless)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Development.Shake
 import Development.Shake.FilePath
 import Network.Google
+import Network.Google.Auth
 import Network.Google.YouTube
 import System.Environment (getArgs,getProgName,lookupEnv,setEnv)
 import System.IO (stderr,hPutStrLn)
@@ -19,17 +22,22 @@ import System.Exit
 
 fetchDescription :: Text -> IO (Maybe Text)
 fetchDescription vidId = do
+  -- That variable is read by gogol, but provide a bit of wrapping to
+  -- the possible error messages.
   let credsVar = "GOOGLE_APPLICATION_CREDENTIALS"
-  lookupEnv credsVar >>= \case
-    Just _ -> pure ()
-    Nothing -> setEnv credsVar "credentials.json"
+  credsFromEnv <- maybe False (const True) <$> lookupEnv credsVar
+  unless credsFromEnv $ setEnv credsVar "credentials.json"
 
-  lgr <- newLogger Debug stderr
-  env <- newEnv <&> (envLogger .~ lgr) . (envScopes .~ youTubeReadOnlyScope)
-  vlr <- runResourceT . runGoogle env $ send (videosList "snippet" & vlId ?~ vidId)
-  let title = vlr ^. vlrItems . each . vSnippet . each . vsTitle
-      desc = vlr ^. vlrItems . each . vSnippet . each . vsDescription
-  pure $ Text.unlines <$> sequence [title,desc]
+  handleJust @ AuthError
+    (^? _MissingFileError)
+    (\fp -> ioError $ userError $ credsVar <> " envvar or " <> fp <> " file needed")
+    $ do
+      lgr <- newLogger Debug stderr
+      env <- newEnv <&> (envLogger .~ lgr) . (envScopes .~ youTubeReadOnlyScope)
+      vlr <- runResourceT . runGoogle env $ send (videosList "snippet" & vlId ?~ vidId)
+      let title = vlr ^. vlrItems . each . vSnippet . each . vsTitle
+          desc = vlr ^. vlrItems . each . vSnippet . each . vsDescription
+      pure $ Text.unlines <$> sequence [title,desc]
 
 descriptionRule :: Rules ()
 descriptionRule =

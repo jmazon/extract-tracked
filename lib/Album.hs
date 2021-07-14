@@ -3,6 +3,7 @@
 module Album where
 
 import           Control.DeepSeq
+import           Control.Exception (throwIO)
 import           Control.Monad
 import           Data.Binary
 import           Data.Char
@@ -18,6 +19,7 @@ import qualified Data.Text.IO as Text
 import           Development.Shake
 import           Development.Shake.FilePath
 import qualified System.Environment as Sys
+import           System.IO.Error (isDoesNotExistError)
 
 import           FetchMetadata
 import           DescriptionParser
@@ -42,12 +44,15 @@ mkYoutubeDl :: String -> Resource -> Double
             -> String -> String -> Action ()
 mkYoutubeDl path res timeout videoId outFile =
   actionRetry 3 $ withResource res 1 $
-    cmd_ (Timeout timeout)
-         [ path
-         , "-x", "--audio-format", "best"
-         , "--exec","mv -- {} " <> outFile
-         , "--", videoId
-         ]
+      cmd_ (Timeout timeout)
+           [ path
+           , "-x", "--audio-format", "best"
+           , "--exec","mv -- {} " <> outFile
+           , "--", videoId
+           ]
+    `actionCatch` \e -> case isDoesNotExistError e of
+                         True -> liftIO $ ioError $ userError "youtube-dl not found.  Set its path in the PATH or its full name in the YOUTUBEDL environment variable."
+                         False -> liftIO $ throwIO e
 
 looksLikeVideoId :: String -> Bool
 looksLikeVideoId s = map p s == replicate 11 True
